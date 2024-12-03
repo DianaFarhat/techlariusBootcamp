@@ -94,6 +94,15 @@ function addProductToTable(event) {
 
         // Update footer
         updateFooter();
+
+        // Disable the selected option in the dropdown
+        const selectedOption = productSelect.querySelector(`option[value="${selectedProductId}"]`);
+        if (selectedOption) {
+            selectedOption.disabled = true;
+        }
+
+        // Reset the select to the first option or any specific option
+        productSelect.selectedIndex = 0; // Or change this to another index if you prefer a different default
     } else {
         console.log("Product not found.");
     }
@@ -127,6 +136,16 @@ function addDeleteButton(row, callback) {
     deleteCell.appendChild(deleteBtn);
 
     deleteBtn.addEventListener('click', () => {
+        const productName = row.cells[0].textContent;
+        const productId = productsDb.find(product => product.productName === productName).productId;
+
+        // Re-enable the option in the select dropdown
+        const productSelect = document.getElementById('product-select');
+        const optionToEnable = productSelect.querySelector(`option[value="${productId}"]`);
+        if (optionToEnable) {
+            optionToEnable.disabled = false;
+        }
+
         row.remove();
         callback(); // Update footer on row deletion
     });
