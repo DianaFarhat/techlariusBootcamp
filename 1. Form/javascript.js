@@ -60,97 +60,122 @@ function populateProductSelect() {
 
 // This is the function you call when the "Add" button is clicked
 function addProductToTable(event) {
-    event.preventDefault();  // Prevent form submission on button click
-    
+    event.preventDefault(); // Prevent form submission on button click
+
     const productSelect = document.getElementById('product-select');
-    const selectedProductId = productSelect.value;  // Get the selected productId
+    const selectedProductId = productSelect.value; // Get the selected productId
 
     // Find the product from productsDb using the selected productId
     const selectedProduct = productsDb.find(product => product.productId == selectedProductId);
 
     if (selectedProduct) {
-         // Extract product details from the selected product
-    const productName = selectedProduct.productName;
-    const price = selectedProduct.unitPrice;
-    const category = selectedProduct.category;
-    const supplier = selectedProduct.supplier;
+        const { productName, unitPrice: price, category, supplier } = selectedProduct;
 
-    // Example: Add product details to the table (you can customize this part)
-    const table = document.getElementById('order-details-table').getElementsByTagName('tbody')[0];
-    const row = table.insertRow();
+        // Add product details to the table
+        const table = document.getElementById('order-details-table').getElementsByTagName('tbody')[0];
+        const row = table.insertRow();
 
-    // Add product details to the row
-    row.insertCell(0).textContent = productName;  // Product Name
-    row.insertCell(1).textContent = `$${price.toFixed(2)}`;  // Unit Price
+        // Populate row cells
+        row.insertCell(0).textContent = productName;
+        row.insertCell(1).textContent = `$${price.toFixed(2)}`;
 
-    // Create input fields for editable Quantity and Discount
-    const quantityCell = row.insertCell(2);
-    const quantityInput = document.createElement('input');
-    quantityInput.type = 'number';
-    quantityInput.value = 1;  // Default quantity
-    quantityInput.min = 1;  // Minimum value
-    quantityCell.appendChild(quantityInput);
+        createEditableCell(row, 2, 'quantity', 1, updateFooter);
+        createEditableCell(row, 3, 'discount', 0, updateFooter);
 
-    const discountCell = row.insertCell(3);
-    const discountInput = document.createElement('input');
-    discountInput.type = 'number';
-    discountInput.value = 0;  // Default discount
-    discountInput.min = 0;  // Minimum value
-    discountCell.appendChild(discountInput);
+        row.insertCell(4).textContent = category;
+        row.insertCell(5).textContent = supplier;
 
-    // Add Category and Supplier details
-    row.insertCell(4).textContent = category;  // Category
-    row.insertCell(5).textContent = supplier;  // Supplier
+        // Add extended price cell
+        const extendedPriceCell = row.insertCell(6);
+        updateExtendedPrice(row, price, extendedPriceCell);
 
-    // Add Extended Price cell (calculated as price * quantity)
-    const extendedPriceCell = row.insertCell(6);
-    extendedPriceCell.textContent = `$${(price * 1).toFixed(2)}`;  // Default Extended Price
+        // Add delete button
+        addDeleteButton(row, updateFooter);
 
-      // Create the "X" delete button
-      const deleteCell = row.insertCell(7);
-      const deleteBtn = document.createElement('button');
-      deleteBtn.textContent = 'X';
-      deleteBtn.style.color = 'white';  // White text color for the "X"
-      deleteBtn.style.backgroundColor = 'red';  // Red background
-      deleteBtn.style.border = 'none';  // Remove border
-      deleteBtn.style.padding = '5px 10px';  // Padding for a nice button size
-      deleteBtn.style.cursor = 'pointer';  // Pointer cursor on hover
-      deleteBtn.style.borderRadius = '5px';  // Rounded corners for the button
-      deleteCell.appendChild(deleteBtn);
-  
-      // Event listener to delete the row when the "X" is clicked
-      deleteBtn.addEventListener('click', () => {
-          row.remove();  // Remove the row from the table
-      });
-
-
+        // Update footer
+        updateFooter();
     } else {
         console.log("Product not found.");
     }
 }
 
-
-/*
-*
-*
-*/
-
-// Update Extended Price on Quantity Change and Discount Change
-function updateExtendedPrice(input, price, discount) {
-    //
-    updateTotalPrice();
-}
-
-// Update Total Price in Footer
-function updateTotalPrice() {
-    const extendedPrices = document.querySelectorAll('.extended-price');
-    let total = 0;
-
-    extendedPrices.forEach(priceCell => {
-        total += parseFloat(priceCell.textContent.replace('$', ''));
+function createEditableCell(row, cellIndex, type, defaultValue, callback) {
+    const cell = row.insertCell(cellIndex);
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.value = defaultValue;
+    input.min = type === 'quantity' ? 1 : 0; // Quantity must be at least 1, discount at least 0
+    input.addEventListener('input', () => {
+        updateExtendedPrice(row, parseFloat(row.cells[1].textContent.replace('$', '')) || 0, row.cells[6]);
+        callback(); // Update footer on input change
     });
-
-    document.getElementById('total-price').textContent = `$${total.toFixed(2)}`;
+    cell.appendChild(input);
 }
 
+function addDeleteButton(row, callback) {
+    const deleteCell = row.insertCell(7);
+    const deleteBtn = document.createElement('button');
+    deleteBtn.textContent = 'Delete';
+    Object.assign(deleteBtn.style, {
+        color: 'white',
+        backgroundColor: 'red',
+        border: 'none',
+        padding: '5px 10px',
+        cursor: 'pointer',
+        borderRadius: '5px'
+    });
+    deleteCell.appendChild(deleteBtn);
 
+    deleteBtn.addEventListener('click', () => {
+        row.remove();
+        callback(); // Update footer on row deletion
+    });
+}
+
+function updateExtendedPrice(row, price, extendedPriceCell) {
+    const quantity = parseFloat(row.cells[2].querySelector('input').value) || 1;
+    const discount = parseFloat(row.cells[3].querySelector('input').value) || 0;
+    const extendedPrice = price * quantity * (1 - discount / 100);
+    extendedPriceCell.textContent = `$${extendedPrice.toFixed(2)}`;
+}
+
+function updateFooter() {
+    const table = document.getElementById('order-details-table');
+    const tbody = table.querySelector('tbody');
+    const rows = tbody.rows;
+
+    let totalPrice = 0;
+    let totalQuantity = 0;
+    let totalDiscount = 0;
+    let totalExtendedPrice = 0;
+    let rowCount = rows.length;
+
+    for (let i = 0; i < rowCount; i++) {
+        const cells = rows[i].cells;
+        const unitPrice = parseFloat(cells[1].textContent.replace('$', '')) || 0;
+        const quantity = parseFloat(cells[2].querySelector('input').value) || 0;
+        const discount = parseFloat(cells[3].querySelector('input').value) || 0;
+        const extendedPrice = parseFloat(cells[6].textContent.replace('$', '')) || 0;
+
+        totalPrice += unitPrice;
+        totalQuantity += quantity;
+        totalDiscount += discount;
+        totalExtendedPrice += extendedPrice;
+    }
+
+    const avgPrice = rowCount > 0 ? totalPrice / rowCount : 0;
+    const avgDiscount = rowCount > 0 ? totalDiscount / rowCount : 0;
+
+    // Update the footer
+    const tfoot = table.querySelector('tfoot') || table.createTFoot();
+    tfoot.innerHTML = `
+        <tr>
+            <td colspan="1">Totals:</td>
+            <td>Avg: $${avgPrice.toFixed(2)}</td>
+            <td>Quantity: ${totalQuantity}</td>
+            <td>Avg: ${avgDiscount.toFixed(2)}%</td>
+            <td colspan="2"></td>
+            <td>Sum: $${totalExtendedPrice.toFixed(2)}</td>
+        </tr>
+    `;
+}
