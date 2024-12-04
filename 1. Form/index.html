@@ -23,7 +23,7 @@
             </select>   
         </div>
     </div>
-    <form>
+    <form id="order-form">
         <!--Customer Info-->
         <section>
             <div class="customer-details">
@@ -135,9 +135,7 @@
             </div>
         </section>
         <section>
-            <button id="ok-button" onclick="okOrder()">OK</button>
-            <button id="delete-button" onclick="deleteOrder()">Delete</button>
-            <button id="cancel-button" onclick="cancelOrder()">Cancel</button>
+            <button type="button" onclick="okOrder(event)">Place Order</button>
         </section>
        
     </form>

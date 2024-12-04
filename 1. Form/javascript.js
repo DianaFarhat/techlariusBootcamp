@@ -201,8 +201,57 @@ function updateFooter() {
     document.getElementById('total').innerHTML=  `$${total.toFixed(2)}`;;
 }
 
-function okOrder(event){
-    event.preventDefault();
 
+function okOrder(event) {
+    event.preventDefault(); // Prevent form submission
 
+    // Make sure you select the form by its ID or other method
+    const form = document.getElementById('order-form'); // Replace with your actual form ID
+    const formData = new FormData(form); // Pass the form element to FormData
+    const formObject = Object.fromEntries(formData.entries()); // Convert to an object
+
+    // Add Custom Data (Order Items)
+    const order = [];
+    const table = document.getElementById('order-details-table');
+    const tbody = table.querySelector('tbody');
+    const rows = tbody.rows;
+
+    for (let i = 0; i < rows.length; i++) {
+        const cells = rows[i].cells;
+        const productId = productsDb.find(product => product.productName === cells[0].textContent).productId;
+        const quantity = parseFloat(cells[2].querySelector('input').value) || 0;
+        const discount = parseFloat(cells[3].querySelector('input').value) || 0;
+
+        const item = { "productId": productId, "quantity": quantity, "discount": discount };
+        order.push(item); // Use push to add to the array
+    }
+
+    formObject.customerOrder = order;
+
+    // Debug log for order data
+    console.log("Order Data: ", order);
+
+    // Transform the Object to a JSON String
+    const jsonString = JSON.stringify(formObject, null, 2);
+    console.log("Generated JSON String: ", jsonString);  // Debug log
+
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    console.log("Blob created: ", blob); // Debug log
+
+    const url = URL.createObjectURL(blob);
+    console.log("Object URL created: ", url); // Debug log
+
+    // Trigger the download
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'customer_order.json'; // File name for download
+    a.click();
+
+    // Revoke URL after download
+    URL.revokeObjectURL(url);
+    console.log("Blob URL revoked");
 }
+
+
+
+ 
