@@ -33,15 +33,10 @@ document.addEventListener('DOMContentLoaded', () => {
     //Populate the items dropdown
     populateProductSelect();
   
+    //Add freight event listener
+    document.getElementById('freight').addEventListener('input', updateFooter);
 
-
-    //Form submission
-    const okButton = document.getElementById('ok-button');
-    okButton.addEventListener('click', () => {
-        const formData= new FormData(e.target);
-
-        console.log(formData.entries());
-    });
+   
 
 });
 
@@ -113,6 +108,7 @@ function createEditableCell(row, cellIndex, type, defaultValue, callback) {
     const input = document.createElement('input');
     input.type = 'number';
     input.value = defaultValue;
+    input.style.width = '40px'; 
     input.min = type === 'quantity' ? 1 : 0; // Quantity must be at least 1, discount at least 0
     input.addEventListener('input', () => {
         updateExtendedPrice(row, parseFloat(row.cells[1].textContent.replace('$', '')) || 0, row.cells[6]);
@@ -189,7 +185,7 @@ function updateFooter() {
     const tfoot = table.querySelector('tfoot') || table.createTFoot();
     tfoot.innerHTML = `
         <tr>
-            <td colspan="1">Totals:</td>
+            <td>Totals:</td>
             <td>Avg: $${avgPrice.toFixed(2)}</td>
             <td>Quantity: ${totalQuantity}</td>
             <td>Avg: ${avgDiscount.toFixed(2)}%</td>
@@ -197,4 +193,16 @@ function updateFooter() {
             <td>Sum: $${totalExtendedPrice.toFixed(2)}</td>
         </tr>
     `;
+
+    //Update Shipping-Right
+    document.getElementById('subtotal').innerHTML= `$${totalExtendedPrice.toFixed(2)}`;
+    const freightCost= parseFloat(document.getElementById('freight').value);
+    const total= totalExtendedPrice + freightCost;
+    document.getElementById('total').innerHTML=  `$${total.toFixed(2)}`;;
+}
+
+function okOrder(event){
+    event.preventDefault();
+
+
 }
