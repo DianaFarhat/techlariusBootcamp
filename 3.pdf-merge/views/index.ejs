@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Merger</title>
+</head>
+<body>
+    <h1>Upload PDFs to Merge</h1>
+    <form action="/merge-pdfs" method="POST" enctype="multipart/form-data">
+        <label for="pdf1">Upload PDF 1:</label>
+        <input type="file" name="pdfs" id="pdf1" accept="application/pdf" required><br><br>
+        
+        <label for="pdf2">Upload PDF 2:</label>
+        <input type="file" name="pdfs" id="pdf2" accept="application/pdf" required><br><br>
+        
+        <button type="submit">Merge PDFs</button>
+    </form>
+</body>
+</html>
