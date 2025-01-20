@@ -1,5 +1,5 @@
 const mongoose= require('mongoose');
-const { merge } = require('../routes/routes');
+
 
 const mergedPdfSchema= new mongoose.Schema({
     file1: {
@@ -15,3 +15,5 @@ const mergedPdfSchema= new mongoose.Schema({
         default: null
     }
 })
+
+module.exports= mongoose.model("mergedPdf", mergedPdfSchema)

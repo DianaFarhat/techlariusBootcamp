@@ -1,21 +1,6 @@
-const express = require('express');
-const router = express.Router();
-const multer = require('multer');  
-const MergedPdf = require('../models/mergedPdf'); 
-console.log(MergedPdf); 
-
-// Initialize multer for file handling
-const upload = multer({
-    dest: 'uploads/',
-    fileFilter: (req, file, cb) => {
-        if (file.mimetype === 'application/pdf') {
-            cb(null, true);
-        } else {
-            cb(new Error('Only PDF files are allowed!'));
-        }
-    },
-    //limits: { fileSize: 10 * 1024 * 1024 }, // Limit to 10 MB
-});
+const express = require('express')
+const router = express.Router()
+const mergedPdf= require('../models/mergedPdf')
 
 // Home route
 router.get('/', (req, res) => {
@@ -23,62 +8,76 @@ router.get('/', (req, res) => {
 });
 
 
-// Handle the POST request to merge PDFs
-router.post('/merge-pdfs', upload.fields([
-    { name: 'pdf1', maxCount: 1 }, 
-    { name: 'pdf2', maxCount: 1 }
-]), async (req, res) => {
-    try {
-        console.log('Received files:', req.files);
+//Handling File Uploads
+const multer = require('multer');
+const pdfMerge = require('pdf-merge');  // Use a PDF merging library (you can choose another one)
+const path = require('path');
+const fs = require('fs');
 
-        // Check if both files are uploaded
-        if (!req.files || !req.files['pdf1'] || !req.files['pdf2']) {
-            return res.status(400).send('Both PDF files are required');
+// Define storage settings for multer
+const upload = multer({ 
+    dest: 'uploads/', // Temporary folder to store the uploaded files
+    fileFilter: (req, file, cb) => {
+        // Check file extension
+        const extname = path.extname(file.originalname).toLowerCase();
+        if (extname !== '.pdf') {
+            return cb(new Error('Only PDF files are allowed.'));
         }
 
-        // Dynamically import PDFMerger
-        const PDFMerger = (await import('pdf-merger-js')).default;
-        const merger = new PDFMerger();
+        // Check MIME type for PDF
+        if (file.mimetype !== 'application/pdf') {
+            return cb(new Error('Only PDF files are allowed.'));
+        }
 
-        // Safely access the uploaded files by their field names
-        const pdf1 = req.files['pdf1'][0];
-        const pdf2 = req.files['pdf2'][0];
-
-        // Debug: Check if files are being properly received
-        console.log('Uploaded PDFs:', { pdf1, pdf2 });
-
-        // Add the PDFs to the merger
-        await merger.add(pdf1.path); // Use temp file path from multer
-        await merger.add(pdf2.path);
-
-        // Define the path to save the merged PDF
-        const outputFilePath = 'uploads/merged-output.pdf';
-        await merger.save(outputFilePath);
-        console.log('Saving merged PDF to:', outputFilePath);
-
-        // Save the file paths to the database
-        const mergedPdf = new MergedPdf({
-            file1: pdf1.path,
-            file2: pdf2.path,
-            mergedFile: outputFilePath,
-        });
-
-        // Save the mergedPdf object to the database
-        await mergedPdf.save();
-        console.log('Merged PDF saved to database');
-
-        // Send the merged file back to the client
-        res.download(outputFilePath, 'merged.pdf', (err) => {
-            if (err) {
-                console.error('Error sending file:', err);
-                res.status(500).send('Error sending file');
-            }
-        });
-    } catch (error) {
-        console.error('Error merging PDFs:', error);
-        res.status(500).send('An error occurred while merging the PDFs');
+        // Proceed if file is a PDF
+        cb(null, true);
     }
 });
+
+// Route to handle file upload and merging
+router.post('/upload', upload.fields([{ name: 'file1', maxCount: 1 }, { name: 'file2', maxCount: 1 }]), (req, res) => {
+    // Get the uploaded files
+    const file1 = req.files.file1 ? req.files.file1[0] : null;
+    const file2 = req.files.file2 ? req.files.file2[0] : null;
+
+    // If both files are missing, return an error
+    if (!file1 || !file2) {
+        return res.status(400).send('Both files are required to merge.');
+    }
+
+    // Paths of the uploaded files
+    const file1Path = path.join(__dirname, file1.path);
+    const file2Path = path.join(__dirname, file2.path);
+
+    // Merging the PDFs
+    pdfMerge([file1Path, file2Path])
+        .then((mergedPdfBuffer) => {
+            // Save the merged PDF file
+            const mergedFilePath = path.join(__dirname, 'uploads', 'mergedFile.pdf');
+            require('fs').writeFileSync(mergedFilePath, mergedPdfBuffer);
+
+            // Respond with the merged PDF file for download
+            res.download(mergedFilePath, 'mergedFile.pdf', (err) => {
+                if (err) {
+                    return res.status(500).send('Error downloading the merged file.');
+                }
+
+                // Clean up temporary files after download
+                require('fs').unlinkSync(file1Path);
+                require('fs').unlinkSync(file2Path);
+                require('fs').unlinkSync(mergedFilePath);
+            });
+        })
+        .catch((err) => {
+            console.error('Error merging PDFs:', err);
+            res.status(500).send('Error merging files.');
+        });
+});
+
+
+
+
+
 
 
 module.exports= router;  
