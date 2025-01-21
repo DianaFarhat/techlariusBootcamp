@@ -8,25 +8,22 @@ app.set('view engine', 'ejs');
 // Middleware to parse form data
 app.use(express.urlencoded({ extended: true }));
 
-// Route to serve the HTML form
+// Route to render form and handle password generation
 app.get('/', (req, res) => {
-  res.render('index');
-});
-
-// Route to generate password
-app.post('/generate', (req, res) => {
-  // Generate a random password
-  const password = generator.generate({
-    length: 10,
-    numbers: true
+    res.render('index', { password: null });
   });
-
-  // Send the password back to the user
-  res.send(`
-    <h1>Generated Password: ${password}</h1>
-    <a href="/">Go back</a>
-  `);
-});
+  
+  // Route to handle password generation on the same page
+  app.post('/', (req, res) => {
+    // Generate a random password
+    const password = generator.generate({
+      length: 10,
+      numbers: true
+    });
+  
+    // Send the password back to the user on the same page
+    res.render('index', { password: password });
+  });
 
 // Start the server
 app.listen(3000, () => {
